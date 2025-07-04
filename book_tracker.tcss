@@ -1,0 +1,21 @@
+
+    BookTrackerApp { background: $surface; }
+    #book-table { height: 100%; }
+    #book-form, #confirm-delete-dialog, #initial-setup-dialog {
+        padding: 0 1; width: 80; border: thick $primary; background: $surface;
+    }
+    #book-form, #confirm-delete-dialog {
+        grid-size: 2; grid-gutter: 1 2; height: auto;
+    }
+    #initial-setup-dialog { align: center middle; height: 15; }
+    #welcome-title { width: 100%; text-align: center; padding-top: 1; text-style: bold; }
+    #instructions { width: 100%; text-align: center; margin: 1 0; }
+    #form-title, #question {
+        column-span: 2; width: 100%; text-align: center; padding: 1; background: $primary; color: $text;
+    }
+    #question { height: auto; }
+    #confirm-delete-dialog { width: 60; }
+    Input, Select { width: 100%; }
+    #my_review { height: 5; }
+    Button { margin-top: 1; width: 100%; }
+    
