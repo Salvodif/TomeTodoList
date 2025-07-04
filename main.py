@@ -109,7 +109,7 @@ def save_books_to_csv(filename: str, books: List[Book]):
 class InitialSetupScreen(ModalScreen[Optional[str]]):
     def compose(self) -> ComposeResult:
         with Vertical(id="initial-setup-dialog"):
-            yield Static("Benvenuto nel Tracciatore di Libri!", id="welcome-title")
+            yield Static("Benvenuto in TomeTodoList!", id="welcome-title")
             yield Static("Il file della libreria (my_library.csv) non è stato trovato.\n\nIndica il percorso del file CSV da importare per iniziare.", id="instructions")
             yield Input(value="goodreads_library_export.csv", id="csv_path_input")
             yield Button("Inizia Importazione", variant="primary", id="import")
@@ -211,8 +211,8 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
 
 # --- App Principale ---
 
-class BookTrackerApp(App):
-    CSS_PATH = "book_tracker.tcss"
+class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
+    CSS_PATH = "tometodolist.tcss"
     BINDINGS = [
         Binding("q", "quit", "Esci"), Binding("a", "add_book", "Aggiungi"),
         Binding("e", "edit_book", "Modifica"), Binding("d", "delete_book", "Cancella"),
@@ -238,7 +238,7 @@ class BookTrackerApp(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.title = "Tracciatore di Libri"
+        self.title = "TomeTodoList"
         self.table.cursor_type = "row"
         self.table.add_columns(*[col[0] for col in self.columns])
         
@@ -361,7 +361,7 @@ class BookTrackerApp(App):
 
 if __name__ == "__main__":
     css_content = """
-    BookTrackerApp { background: $surface; }
+    TomeTodoListApp { background: $surface; }
     #book-table { height: 100%; }
     #book-form, #confirm-delete-dialog, #initial-setup-dialog {
         padding: 0 1; width: 80; border: thick $primary; background: $surface;
@@ -381,8 +381,8 @@ if __name__ == "__main__":
     #my_review { height: 5; }
     Button { margin-top: 1; width: 100%; }
     """
-    with open("book_tracker.tcss", "w") as css_file:
+    with open("tometodolist.tcss", "w") as css_file:
         css_file.write(css_content)
 
-    app = BookTrackerApp()
+    app = BookTrackerApp() # Class name remains BookTrackerApp, as renaming it is a larger refactor
     app.run()
