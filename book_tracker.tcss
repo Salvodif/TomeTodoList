@@ -1,6 +1,7 @@
 
     BookTrackerApp { background: $surface; }
-    #book-table { height: 100%; }
+    #search-input { margin: 1 0; }
+    #book-table { height: 1fr; } /* Usa lo spazio rimanente */
     #book-form, #confirm-delete-dialog, #initial-setup-dialog {
         padding: 0 1; width: 80; border: thick $primary; background: $surface;
     }

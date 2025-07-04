@@ -221,6 +221,7 @@ class BookTrackerApp(App):
     def __init__(self):
         super().__init__()
         self.books: List[Book] = []
+        self.search_input = Input(placeholder="Cerca per titolo o autore...", id="search-input")
         self.table = DataTable(id="book-table")
         self.columns = [
             ("Autore", "author"), ("Titolo", "title"), ("Rating", "my_rating"),
@@ -234,6 +235,7 @@ class BookTrackerApp(App):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with VerticalScroll():
+            yield self.search_input
             yield self.table
         yield Footer()
 
@@ -269,17 +271,27 @@ class BookTrackerApp(App):
     def refresh_table(self):
         self.table.clear()
         
+        search_term = self.search_input.value.lower()
+
+        if search_term:
+            filtered_books = [
+                book for book in self.books
+                if search_term in book.title.lower() or search_term in book.author.lower()
+            ]
+        else:
+            filtered_books = self.books[:]
+
         sort_attr = self.sort_by
         sort_reverse = self.sort_reverse
         
         key_func = lambda x: str(getattr(x, sort_attr) or "")
         
-        reading_books = sorted([b for b in self.books if b.is_reading], key=key_func, reverse=sort_reverse)
-        other_books = sorted([b for b in self.books if not b.is_reading], key=key_func, reverse=sort_reverse)
+        reading_books = sorted([b for b in filtered_books if b.is_reading], key=key_func, reverse=sort_reverse)
+        other_books = sorted([b for b in filtered_books if not b.is_reading], key=key_func, reverse=sort_reverse)
         
-        sorted_books = reading_books + other_books
+        sorted_and_filtered_books = reading_books + other_books
 
-        for book in sorted_books:
+        for book in sorted_and_filtered_books:
             # Aggiunge una riga alla volta. L'ordine dei valori deve corrispondere
             # all'ordine definito in self.columns
             self.table.add_row(
@@ -338,6 +350,10 @@ class BookTrackerApp(App):
                 self.refresh_table()
                 self.notify(f"Libro '{updated_book.title}' modificato.", title="Successo")
         self.push_screen(BookFormScreen(book=book_to_edit), on_dismiss)
+
+    @on(Input.Changed, "#search-input")
+    def on_search_input_changed(self, event: Input.Changed):
+        self.refresh_table()
     
     def action_delete_book(self):
         if self.table.cursor_row < 0:
@@ -362,7 +378,8 @@ class BookTrackerApp(App):
 if __name__ == "__main__":
     css_content = """
     BookTrackerApp { background: $surface; }
-    #book-table { height: 100%; }
+    #search-input { margin: 1 0; }
+    #book-table { height: 1fr; } /* Usa lo spazio rimanente */
     #book-form, #confirm-delete-dialog, #initial-setup-dialog {
         padding: 0 1; width: 80; border: thick $primary; background: $surface;
     }
