@@ -1,9 +1,10 @@
 import csv
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import List, Optional
 
+from rich.text import Text  # Importa Text
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -109,7 +110,7 @@ def save_books_to_csv(filename: str, books: List[Book]):
 class InitialSetupScreen(ModalScreen[Optional[str]]):
     def compose(self) -> ComposeResult:
         with Vertical(id="initial-setup-dialog"):
-            yield Static("Benvenuto in TomeTodoList!", id="welcome-title")
+            yield Static("Benvenuto nel Tracciatore di Libri!", id="welcome-title")
             yield Static("Il file della libreria (my_library.csv) non è stato trovato.\n\nIndica il percorso del file CSV da importare per iniziare.", id="instructions")
             yield Input(value="goodreads_library_export.csv", id="csv_path_input")
             yield Button("Inizia Importazione", variant="primary", id="import")
@@ -209,18 +210,45 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
     def on_button_pressed(self, event: Button.Pressed):
         self.dismiss(event.button.id == "delete")
 
+class SearchScreen(ModalScreen[Optional[str]]):
+    def __init__(self, initial_value: str = ""):
+        super().__init__()
+        self.initial_value = initial_value
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="search-dialog"):
+            yield Static("Cerca Libri", id="search-title")
+            yield Input(value=self.initial_value, placeholder="Titolo o autore...", id="search-modal-input")
+            with Grid(id="search-buttons", columns=2):
+                yield Button("Cerca", variant="primary", id="search-confirm")
+                yield Button("Annulla", variant="default", id="search-cancel")
+
+    @on(Button.Pressed)
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "search-cancel":
+            self.dismiss(None)
+        elif event.button.id == "search-confirm":
+            search_term = self.query_one("#search-modal-input", Input).value
+            self.dismiss(search_term)
+
+    @on(Input.Submitted, "#search-modal-input")
+    def on_input_submitted(self, event: Input.Submitted):
+        self.dismiss(event.value)
+
 # --- App Principale ---
 
-class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
-    CSS_PATH = "tometodolist.tcss"
+class BookTrackerApp(App):
+    CSS_PATH = "book_tracker.tcss"
     BINDINGS = [
         Binding("q", "quit", "Esci"), Binding("a", "add_book", "Aggiungi"),
         Binding("e", "edit_book", "Modifica"), Binding("d", "delete_book", "Cancella"),
+        Binding("ctrl+f", "show_search_popup", "Cerca"),
     ]
 
     def __init__(self):
         super().__init__()
         self.books: List[Book] = []
+        self.current_search_term: str = "" # Per memorizzare il termine di ricerca
         self.table = DataTable(id="book-table")
         self.columns = [
             ("Autore", "author"), ("Titolo", "title"), ("Rating", "my_rating"),
@@ -238,7 +266,7 @@ class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
         yield Footer()
 
     def on_mount(self) -> None:
-        self.title = "TomeTodoList"
+        self.title = "Tracciatore di Libri"
         self.table.cursor_type = "row"
         self.table.add_columns(*[col[0] for col in self.columns])
         
@@ -269,30 +297,50 @@ class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
     def refresh_table(self):
         self.table.clear()
         
+        search_term = self.current_search_term.lower() # Usa il termine di ricerca memorizzato
+
+        if search_term:
+            # Filtra prima in base al termine di ricerca
+            current_list = [
+                book for book in self.books
+                if search_term in book.title.lower() or search_term in book.author.lower()
+            ]
+        else:
+            current_list = self.books[:]
+
         sort_attr = self.sort_by
         sort_reverse = self.sort_reverse
         
         key_func = lambda x: str(getattr(x, sort_attr) or "")
         
-        reading_books = sorted([b for b in self.books if b.is_reading], key=key_func, reverse=sort_reverse)
-        other_books = sorted([b for b in self.books if not b.is_reading], key=key_func, reverse=sort_reverse)
+        # Applica l'ordinamento alla lista già filtrata (o completa se non c'è ricerca)
+        reading_books = sorted([b for b in current_list if b.is_reading], key=key_func, reverse=sort_reverse)
+        other_books = sorted([b for b in current_list if not b.is_reading], key=key_func, reverse=sort_reverse)
         
-        sorted_books = reading_books + other_books
+        processed_books = reading_books + other_books
 
-        for book in sorted_books:
-            # Aggiunge una riga alla volta. L'ordine dei valori deve corrispondere
-            # all'ordine definito in self.columns
+        for book in processed_books:
+            current_style_args = {"style": "on yellow black"} if book.is_reading else {}
+
+            # Converte tutti i valori delle celle in Text stilizzato se necessario
+            # Nota: rating_to_stars già restituisce una stringa, che Text può gestire.
+            # I valori numerici o None devono essere convertiti in stringa.
+
+            cells_data = [
+                Text(book.author or "", **current_style_args),
+                Text(book.title or "", **current_style_args),
+                Text(rating_to_stars(book.my_rating), **current_style_args),
+                Text(book.publisher or "", **current_style_args),
+                Text(str(book.year_published) if book.year_published else "", **current_style_args),
+                Text(book.date_read or "", **current_style_args),
+                Text(book.date_added or "", **current_style_args),
+                Text(book.bookshelves or "", **current_style_args),
+                Text(book.isbn13 or "0000000000000", **current_style_args),
+                Text(book.my_review or "", **current_style_args)
+            ]
+
             self.table.add_row(
-                book.author, 
-                book.title, 
-                rating_to_stars(book.my_rating),
-                book.publisher, 
-                str(book.year_published) if book.year_published else "",
-                book.date_read, 
-                book.date_added, 
-                book.bookshelves, 
-                book.isbn13, 
-                book.my_review,
+                *cells_data,
                 key=str(book.book_id)
             )
 
@@ -354,6 +402,15 @@ class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
                 self.refresh_table()
                 self.notify(f"Libro '{book_to_delete.title}' cancellato.", title="Successo")
         self.push_screen(ConfirmDeleteScreen(book_title=book_to_delete.title), on_dismiss)
+
+    def action_show_search_popup(self):
+        def search_callback(search_term: Optional[str]):
+            if search_term is not None: # Permette stringa vuota per cancellare ricerca
+                self.current_search_term = search_term
+                self.refresh_table()
+            # Se search_term è None (popup annullato), non fare nulla
+
+        self.push_screen(SearchScreen(initial_value=self.current_search_term), search_callback)
     
     def action_quit(self):
         save_books_to_csv(DB_CSV, self.books)
@@ -361,8 +418,19 @@ class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
 
 if __name__ == "__main__":
     css_content = """
-    TomeTodoListApp { background: $surface; }
-    #book-table { height: 100%; }
+    BookTrackerApp { background: $surface; }
+    #book-table { height: 1fr; } /* Usa lo spazio rimanente */
+    .reading-row {
+        background: yellow;
+        color: black;
+    }
+    #search-dialog {
+        padding: 1 2; width: 60; height: auto; border: thick $primary;
+        background: $surface; align: center middle;
+    }
+    #search-title { width: 100%; text-align: center; padding-bottom: 1; text-style: bold; }
+    #search-modal-input { margin-bottom: 1; }
+    #search-buttons Button { width: 100%; }
     #book-form, #confirm-delete-dialog, #initial-setup-dialog {
         padding: 0 1; width: 80; border: thick $primary; background: $surface;
     }
@@ -381,8 +449,8 @@ if __name__ == "__main__":
     #my_review { height: 5; }
     Button { margin-top: 1; width: 100%; }
     """
-    with open("tometodolist.tcss", "w") as css_file:
+    with open("book_tracker.tcss", "w") as css_file:
         css_file.write(css_content)
 
-    app = BookTrackerApp() # Class name remains BookTrackerApp, as renaming it is a larger refactor
+    app = BookTrackerApp()
     app.run()
