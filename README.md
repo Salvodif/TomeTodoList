@@ -1,4 +1,4 @@
-# Book Tracker
+# TomeTodoList 📚
 
 A simple application to track your book reading progress.
 
@@ -6,7 +6,7 @@ This project uses a CSV file to store book data. The initial project was develop
 
 However, you can start with any CSV file, even an empty one. The application will create or adapt the CSV file as needed to store your book information.
 
-## Features
+## ✨ Features
 
 - Import books from a CSV file (e.g., Goodreads export).
 - View your book library in a sortable, interactive table.
@@ -17,16 +17,15 @@ However, you can start with any CSV file, even an empty one. The application wil
 - All data is saved locally to `my_library.csv`.
 - User-friendly terminal interface powered by Textual.
 
-## Installation
+## 🛠️ Installation
 
 1.  **Python**: Requires Python 3.7+ (Textual recommendation).
 2.  **Install Textual**:
     ```bash
     pip install textual
     ```
-    (If you have a `requirements.txt` file, you can use `pip install -r requirements.txt` instead).
 
-## Usage
+## 🚀 Usage
 
 1.  Run the application from your terminal:
     ```bash
@@ -43,10 +42,6 @@ However, you can start with any CSV file, even an empty one. The application wil
 - `d`: Delete the selected book
 - `q`: Quit the application (and save changes)
 
-## Contributing
-
-(To be filled in - e.g., Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.)
-
-## License
+## 📄 License
 
 [MIT](LICENSE)
