@@ -1,9 +1,10 @@
 import csv
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import List, Optional
 
+from rich.text import Text  # Importa Text
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -319,23 +320,28 @@ class BookTrackerApp(App):
         processed_books = reading_books + other_books
 
         for book in processed_books:
-            row_style = ""
-            if book.is_reading:
-                row_style = "reading-row"
+            current_style_args = {"style": "on yellow black"} if book.is_reading else {}
+
+            # Converte tutti i valori delle celle in Text stilizzato se necessario
+            # Nota: rating_to_stars già restituisce una stringa, che Text può gestire.
+            # I valori numerici o None devono essere convertiti in stringa.
+
+            cells_data = [
+                Text(book.author or "", **current_style_args),
+                Text(book.title or "", **current_style_args),
+                Text(rating_to_stars(book.my_rating), **current_style_args),
+                Text(book.publisher or "", **current_style_args),
+                Text(str(book.year_published) if book.year_published else "", **current_style_args),
+                Text(book.date_read or "", **current_style_args),
+                Text(book.date_added or "", **current_style_args),
+                Text(book.bookshelves or "", **current_style_args),
+                Text(book.isbn13 or "0000000000000", **current_style_args),
+                Text(book.my_review or "", **current_style_args)
+            ]
 
             self.table.add_row(
-                book.author,
-                book.title,
-                rating_to_stars(book.my_rating),
-                book.publisher,
-                str(book.year_published) if book.year_published else "",
-                book.date_read,
-                book.date_added,
-                book.bookshelves,
-                book.isbn13,
-                book.my_review,
-                key=str(book.book_id),
-                classes=row_style if row_style else None  # Applica la classe solo se definita
+                *cells_data,
+                key=str(book.book_id)
             )
 
     @on(DataTable.HeaderSelected)
