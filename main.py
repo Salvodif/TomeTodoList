@@ -77,9 +77,9 @@ def load_books_from_csv(filename: str, is_initial_import: bool = False) -> List[
                             title=row.get("title", "N/A"),
                             author=row.get("author", "N/A"),
                             isbn13=clean_isbn(row.get("isbn13", "")),
-                            my_rating=int(float(row.get("my_rating", 0))),
+                            my_rating=int(float(row.get("my_rating") or 0)), # Tollerante a stringhe vuote per my_rating
                             publisher=row.get("publisher", ""),
-                            year_published=int(float(row.get("year_published", 0))) if row.get("year_published") else 0,
+                            year_published=int(float(row.get("year_published") or 0)), # Tollerante a stringhe vuote per year_published
                             date_read=row.get("date_read", ""),
                             date_added=row.get("date_added", ""),
                             bookshelves=row.get("bookshelves", ""),
@@ -241,6 +241,7 @@ class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
     BINDINGS = [
         Binding("q", "quit", "Esci"), Binding("a", "add_book", "Aggiungi"),
         Binding("e", "edit_book", "Modifica"), Binding("d", "delete_book", "Cancella"),
+        Binding("ctrl+f", "show_search_screen", "Cerca Libri"),
     ]
 
     def __init__(self):
@@ -379,6 +380,19 @@ class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
                 self.refresh_table()
                 self.notify(f"Libro '{book_to_delete.title}' cancellato.", title="Successo")
         self.push_screen(ConfirmDeleteScreen(book_title=book_to_delete.title), on_dismiss)
+
+    def action_show_search_screen(self):
+        """Mostra la schermata di ricerca dei libri."""
+        # Definisce cosa fare quando la SearchScreen viene chiusa.
+        # Per ora, stampiamo solo il termine di ricerca se presente.
+        # In futuro, qui si attiverà la logica di filtro della tabella.
+        def search_callback(search_term: Optional[str]):
+            if search_term is not None: # Può essere stringa vuota se l'utente preme cerca senza input
+                self.notify(f"Ricerca per: '{search_term}' (logica di filtro da implementare)")
+            else:
+                self.notify("Ricerca annullata.")
+
+        self.push_screen(SearchScreen(), search_callback)
     
     def action_quit(self):
         save_books_to_csv(DB_CSV, self.books)
