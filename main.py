@@ -78,9 +78,9 @@ def load_books_from_csv(filename: str, is_initial_import: bool = False) -> List[
                             title=row.get("title", "N/A"),
                             author=row.get("author", "N/A"),
                             isbn13=clean_isbn(row.get("isbn13", "")),
-                            my_rating=int(float(row.get("my_rating", 0))),
+                            my_rating=int(float(row.get("my_rating") or 0)), # Tollerante a stringhe vuote per my_rating
                             publisher=row.get("publisher", ""),
-                            year_published=int(float(row.get("year_published", 0))) if row.get("year_published") else 0,
+                            year_published=int(float(row.get("year_published") or 0)), # Tollerante a stringhe vuote per year_published
                             date_read=row.get("date_read", ""),
                             date_added=row.get("date_added", ""),
                             bookshelves=row.get("bookshelves", ""),
@@ -219,7 +219,7 @@ class SearchScreen(ModalScreen[Optional[str]]):
         with Vertical(id="search-dialog"):
             yield Static("Cerca Libri", id="search-title")
             yield Input(value=self.initial_value, placeholder="Titolo o autore...", id="search-modal-input")
-            with Grid(id="search-buttons", columns=2):
+            with Grid(id="search-buttons"): # Rimosso columns=2
                 yield Button("Cerca", variant="primary", id="search-confirm")
                 yield Button("Annulla", variant="default", id="search-cancel")
 
@@ -242,7 +242,7 @@ class BookTrackerApp(App):
     BINDINGS = [
         Binding("q", "quit", "Esci"), Binding("a", "add_book", "Aggiungi"),
         Binding("e", "edit_book", "Modifica"), Binding("d", "delete_book", "Cancella"),
-        Binding("ctrl+f", "show_search_popup", "Cerca"),
+        Binding("ctrl+f", "show_search_screen", "Cerca Libri"),
     ]
 
     def __init__(self):
@@ -403,15 +403,19 @@ class BookTrackerApp(App):
                 self.notify(f"Libro '{book_to_delete.title}' cancellato.", title="Successo")
         self.push_screen(ConfirmDeleteScreen(book_title=book_to_delete.title), on_dismiss)
 
-    def action_show_search_popup(self):
+    def action_show_search_screen(self):
+        """Mostra la schermata di ricerca dei libri."""
+        # Definisce cosa fare quando la SearchScreen viene chiusa.
+        # Per ora, stampiamo solo il termine di ricerca se presente.
+        # In futuro, qui si attiverà la logica di filtro della tabella.
         def search_callback(search_term: Optional[str]):
-            if search_term is not None: # Permette stringa vuota per cancellare ricerca
-                self.current_search_term = search_term
-                self.refresh_table()
-            # Se search_term è None (popup annullato), non fare nulla
+            if search_term is not None: # Può essere stringa vuota se l'utente preme cerca senza input
+                self.notify(f"Ricerca per: '{search_term}' (logica di filtro da implementare)")
+            else:
+                self.notify("Ricerca annullata.")
 
-        self.push_screen(SearchScreen(initial_value=self.current_search_term), search_callback)
-    
+        self.push_screen(SearchScreen(), search_callback)
+
     def action_quit(self):
         save_books_to_csv(DB_CSV, self.books)
         self.exit()
@@ -448,6 +452,33 @@ if __name__ == "__main__":
     Input, Select { width: 100%; }
     #my_review { height: 5; }
     Button { margin-top: 1; width: 100%; }
+
+    /* Stili per SearchScreen */
+    #search-dialog {
+        padding: 1 2; /* Aggiunto padding interno */
+        width: 70; /* Larghezza leggermente aumentata */
+        border: thick $primary;
+        background: $surface;
+        height: auto;
+        /* Non serve align: center middle; per il Vertical, gestisce i figli */
+    }
+    #search-title { /* Già presente in BookForm, ma può essere specifico se necessario */
+        column-span: 2; /* Utile se search-dialog fosse un Grid, ma è Vertical */
+        width: 100%;
+        text-align: center;
+        padding-bottom: 1; /* Spazio sotto il titolo */
+        text-style: bold;
+        /* background: $primary; /* Rimosso per uniformità o se si preferisce senza */
+        /* color: $text; */
+    }
+    #search-modal-input {
+        margin-bottom: 1; /* Spazio prima dei bottoni */
+    }
+    #search-buttons {
+        grid-size: 2; /* Definisce 2 colonne per la griglia dei bottoni */
+        grid-gutter: 1 2; /* Spaziatura orizzontale e verticale tra i bottoni */
+        /* width: 100%; Non necessario se i bottoni stessi hanno width 100% e il Grid si adatta */
+    }
     """
     with open("book_tracker.tcss", "w") as css_file:
         css_file.write(css_content)
