@@ -1,32 +1,19 @@
 
     BookTrackerApp { background: $surface; }
     #book-table { height: 1fr; } /* Usa lo spazio rimanente */
-    #book-form, #confirm-delete-dialog, #initial-setup-dialog {
-        padding: 0 1; width: 80; border: thick $primary; background: $surface;
-    }
     .reading-row {
         background: yellow;
-        color: black; /* Assicura che il testo sia leggibile su sfondo giallo */
+        color: black;
     }
     #search-dialog {
-        padding: 1 2;
-        width: 60;
-        height: auto;
-        border: thick $primary;
-        background: $surface;
-        align: center middle; /* Allinea verticalmente e orizzontalmente */
+        padding: 1 2; width: 60; height: auto; border: thick $primary;
+        background: $surface; align: center middle;
     }
-    #search-title {
-        width: 100%;
-        text-align: center;
-        padding-bottom: 1;
-        text-style: bold;
-    }
-    #search-modal-input {
-        margin-bottom: 1;
-    }
-    #search-buttons Button { /* Stile specifico per i bottoni dentro la griglia search-buttons */
-         width: 100%;
+    #search-title { width: 100%; text-align: center; padding-bottom: 1; text-style: bold; }
+    #search-modal-input { margin-bottom: 1; }
+    #search-buttons Button { width: 100%; }
+    #book-form, #confirm-delete-dialog, #initial-setup-dialog {
+        padding: 0 1; width: 80; border: thick $primary; background: $surface;
     }
     #book-form, #confirm-delete-dialog {
         grid-size: 2; grid-gutter: 1 2; height: auto;

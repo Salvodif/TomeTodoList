@@ -1,4 +1,4 @@
-# Book Tracker
+# TomeTodoList
 
 A simple application to track your book reading progress.
 
