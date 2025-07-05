@@ -209,6 +209,31 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
     def on_button_pressed(self, event: Button.Pressed):
         self.dismiss(event.button.id == "delete")
 
+class SearchScreen(ModalScreen[Optional[str]]):
+    def __init__(self, initial_value: str = ""):
+        super().__init__()
+        self.initial_value = initial_value
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="search-dialog"):
+            yield Static("Cerca Libri", id="search-title")
+            yield Input(value=self.initial_value, placeholder="Titolo o autore...", id="search-modal-input")
+            with Grid(id="search-buttons"): # Rimosso columns=2
+                yield Button("Cerca", variant="primary", id="search-confirm")
+                yield Button("Annulla", variant="default", id="search-cancel")
+
+    @on(Button.Pressed)
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "search-cancel":
+            self.dismiss(None)
+        elif event.button.id == "search-confirm":
+            search_term = self.query_one("#search-modal-input", Input).value
+            self.dismiss(search_term)
+
+    @on(Input.Submitted, "#search-modal-input")
+    def on_input_submitted(self, event: Input.Submitted):
+        self.dismiss(event.value)
+
 # --- App Principale ---
 
 class BookTrackerApp(App): # Keeping class name for now to avoid larger refactor
@@ -380,6 +405,33 @@ if __name__ == "__main__":
     Input, Select { width: 100%; }
     #my_review { height: 5; }
     Button { margin-top: 1; width: 100%; }
+
+    /* Stili per SearchScreen */
+    #search-dialog {
+        padding: 1 2; /* Aggiunto padding interno */
+        width: 70; /* Larghezza leggermente aumentata */
+        border: thick $primary;
+        background: $surface;
+        height: auto;
+        /* Non serve align: center middle; per il Vertical, gestisce i figli */
+    }
+    #search-title { /* Già presente in BookForm, ma può essere specifico se necessario */
+        column-span: 2; /* Utile se search-dialog fosse un Grid, ma è Vertical */
+        width: 100%;
+        text-align: center;
+        padding-bottom: 1; /* Spazio sotto il titolo */
+        text-style: bold;
+        /* background: $primary; /* Rimosso per uniformità o se si preferisce senza */
+        /* color: $text; */
+    }
+    #search-modal-input {
+        margin-bottom: 1; /* Spazio prima dei bottoni */
+    }
+    #search-buttons {
+        grid-size: 2; /* Definisce 2 colonne per la griglia dei bottoni */
+        grid-gutter: 1 2; /* Spaziatura orizzontale e verticale tra i bottoni */
+        /* width: 100%; Non necessario se i bottoni stessi hanno width 100% e il Grid si adatta */
+    }
     """
     with open("tometodolist.tcss", "w") as css_file:
         css_file.write(css_content)
