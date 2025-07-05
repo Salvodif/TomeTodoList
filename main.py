@@ -209,6 +209,31 @@ class ConfirmDeleteScreen(ModalScreen[bool]):
     def on_button_pressed(self, event: Button.Pressed):
         self.dismiss(event.button.id == "delete")
 
+class SearchScreen(ModalScreen[Optional[str]]):
+    def __init__(self, initial_value: str = ""):
+        super().__init__()
+        self.initial_value = initial_value
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="search-dialog"):
+            yield Static("Cerca Libri", id="search-title")
+            yield Input(value=self.initial_value, placeholder="Titolo o autore...", id="search-modal-input")
+            with Grid(id="search-buttons", columns=2):
+                yield Button("Cerca", variant="primary", id="search-confirm")
+                yield Button("Annulla", variant="default", id="search-cancel")
+
+    @on(Button.Pressed)
+    def on_button_pressed(self, event: Button.Pressed):
+        if event.button.id == "search-cancel":
+            self.dismiss(None)
+        elif event.button.id == "search-confirm":
+            search_term = self.query_one("#search-modal-input", Input).value
+            self.dismiss(search_term)
+
+    @on(Input.Submitted, "#search-modal-input")
+    def on_input_submitted(self, event: Input.Submitted):
+        self.dismiss(event.value)
+
 # --- App Principale ---
 
 class BookTrackerApp(App):
@@ -216,12 +241,13 @@ class BookTrackerApp(App):
     BINDINGS = [
         Binding("q", "quit", "Esci"), Binding("a", "add_book", "Aggiungi"),
         Binding("e", "edit_book", "Modifica"), Binding("d", "delete_book", "Cancella"),
+        Binding("ctrl+f", "show_search_popup", "Cerca"),
     ]
 
     def __init__(self):
         super().__init__()
         self.books: List[Book] = []
-        self.search_input = Input(placeholder="Cerca per titolo o autore...", id="search-input")
+        self.current_search_term: str = "" # Per memorizzare il termine di ricerca
         self.table = DataTable(id="book-table")
         self.columns = [
             ("Autore", "author"), ("Titolo", "title"), ("Rating", "my_rating"),
@@ -235,7 +261,6 @@ class BookTrackerApp(App):
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with VerticalScroll():
-            yield self.search_input
             yield self.table
         yield Footer()
 
@@ -271,27 +296,29 @@ class BookTrackerApp(App):
     def refresh_table(self):
         self.table.clear()
         
-        search_term = self.search_input.value.lower()
+        search_term = self.current_search_term.lower() # Usa il termine di ricerca memorizzato
 
         if search_term:
-            filtered_books = [
+            # Filtra prima in base al termine di ricerca
+            current_list = [
                 book for book in self.books
                 if search_term in book.title.lower() or search_term in book.author.lower()
             ]
         else:
-            filtered_books = self.books[:]
+            current_list = self.books[:]
 
         sort_attr = self.sort_by
         sort_reverse = self.sort_reverse
         
         key_func = lambda x: str(getattr(x, sort_attr) or "")
         
-        reading_books = sorted([b for b in filtered_books if b.is_reading], key=key_func, reverse=sort_reverse)
-        other_books = sorted([b for b in filtered_books if not b.is_reading], key=key_func, reverse=sort_reverse)
+        # Applica l'ordinamento alla lista già filtrata (o completa se non c'è ricerca)
+        reading_books = sorted([b for b in current_list if b.is_reading], key=key_func, reverse=sort_reverse)
+        other_books = sorted([b for b in current_list if not b.is_reading], key=key_func, reverse=sort_reverse)
         
-        sorted_and_filtered_books = reading_books + other_books
+        processed_books = reading_books + other_books
 
-        for book in sorted_and_filtered_books:
+        for book in processed_books:
             row_style = ""
             if book.is_reading:
                 row_style = "reading-row"
@@ -353,10 +380,6 @@ class BookTrackerApp(App):
                 self.refresh_table()
                 self.notify(f"Libro '{updated_book.title}' modificato.", title="Successo")
         self.push_screen(BookFormScreen(book=book_to_edit), on_dismiss)
-
-    @on(Input.Changed, "#search-input")
-    def on_search_input_changed(self, event: Input.Changed):
-        self.refresh_table()
     
     def action_delete_book(self):
         if self.table.cursor_row < 0:
@@ -373,6 +396,15 @@ class BookTrackerApp(App):
                 self.refresh_table()
                 self.notify(f"Libro '{book_to_delete.title}' cancellato.", title="Successo")
         self.push_screen(ConfirmDeleteScreen(book_title=book_to_delete.title), on_dismiss)
+
+    def action_show_search_popup(self):
+        def search_callback(search_term: Optional[str]):
+            if search_term is not None: # Permette stringa vuota per cancellare ricerca
+                self.current_search_term = search_term
+                self.refresh_table()
+            # Se search_term è None (popup annullato), non fare nulla
+
+        self.push_screen(SearchScreen(initial_value=self.current_search_term), search_callback)
     
     def action_quit(self):
         save_books_to_csv(DB_CSV, self.books)
@@ -381,12 +413,18 @@ class BookTrackerApp(App):
 if __name__ == "__main__":
     css_content = """
     BookTrackerApp { background: $surface; }
-    #search-input { margin: 1 0; }
     #book-table { height: 1fr; } /* Usa lo spazio rimanente */
     .reading-row {
         background: yellow;
         color: black;
     }
+    #search-dialog {
+        padding: 1 2; width: 60; height: auto; border: thick $primary;
+        background: $surface; align: center middle;
+    }
+    #search-title { width: 100%; text-align: center; padding-bottom: 1; text-style: bold; }
+    #search-modal-input { margin-bottom: 1; }
+    #search-buttons Button { width: 100%; }
     #book-form, #confirm-delete-dialog, #initial-setup-dialog {
         padding: 0 1; width: 80; border: thick $primary; background: $surface;
     }
