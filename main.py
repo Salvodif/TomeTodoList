@@ -292,20 +292,23 @@ class BookTrackerApp(App):
         sorted_and_filtered_books = reading_books + other_books
 
         for book in sorted_and_filtered_books:
-            # Aggiunge una riga alla volta. L'ordine dei valori deve corrispondere
-            # all'ordine definito in self.columns
+            row_style = ""
+            if book.is_reading:
+                row_style = "reading-row"
+
             self.table.add_row(
-                book.author, 
-                book.title, 
+                book.author,
+                book.title,
                 rating_to_stars(book.my_rating),
-                book.publisher, 
+                book.publisher,
                 str(book.year_published) if book.year_published else "",
-                book.date_read, 
-                book.date_added, 
-                book.bookshelves, 
-                book.isbn13, 
+                book.date_read,
+                book.date_added,
+                book.bookshelves,
+                book.isbn13,
                 book.my_review,
-                key=str(book.book_id)
+                key=str(book.book_id),
+                classes=row_style if row_style else None  # Applica la classe solo se definita
             )
 
     @on(DataTable.HeaderSelected)
@@ -380,6 +383,10 @@ if __name__ == "__main__":
     BookTrackerApp { background: $surface; }
     #search-input { margin: 1 0; }
     #book-table { height: 1fr; } /* Usa lo spazio rimanente */
+    .reading-row {
+        background: yellow;
+        color: black;
+    }
     #book-form, #confirm-delete-dialog, #initial-setup-dialog {
         padding: 0 1; width: 80; border: thick $primary; background: $surface;
     }
